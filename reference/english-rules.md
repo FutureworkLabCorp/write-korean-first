@@ -18,11 +18,13 @@
    `-tion/-sion/-ment` 명사 앞에 빈 동사가 붙었으면 거의 항상 고칠 자리다.
 2. **능동태 기본값.** `is handled by the worker` → `the worker handles`.
    수동은 행위자가 정말 무관할 때만.
-3. **헤지 제거.** `it seems that`, `it is necessary to`, `please note that` 삭제.
+3. **완곡 표현의 역할 확인.** `it seems that`가 실제 불확실성을 나타내면 유지하거나
+   근거에 맞는 영어로 쓴다. `it is necessary to`의 의무와 `please note that`의 안내
+   기능도 삭제 전에 확인한다.
 4. **군더더기 구문.** `in order to` → `to`, `the fact that` → 삭제,
    `has the ability to` → `can`, `in the case of` → `if`/`for`, `utilize` → `use`.
-5. **문장 길이.** 26단어를 넘으면 쪼갤 자리를 찾고, 34단어를 넘으면 쪼갠다.
-6. **`etc.` / `various` 금지.** 개수를 세거나 이름을 쓴다.
+5. **문장 길이.** 26단어를 넘으면 구조를 살피고, 34단어를 넘으면 분할을 우선 검토한다.
+6. **`etc.` / `various` 검토.** 범위가 중요하면 이름이나 개수를 밝힌다.
 7. **주어를 앞에.** `There are three cases that...` → `Three cases...`
 
 ## 두 판본이 어긋나도 되는 지점

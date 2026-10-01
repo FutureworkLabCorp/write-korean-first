@@ -32,13 +32,10 @@ POSITIVE = [
     ("인덱스를 다시 만들 필요가 있다.", "KO-CAL-need"),
     ("같은 이름의 노드가 존재한다.", "KO-CAL-exist"),
     ("이 객체는 세션을 가지고 있다.", "KO-CAL-have"),
-    ("타임아웃이 원인인 것으로 보인다.", "KO-CAL-seem"),
     ("사실상 같은 동작이라고 할 수 있다.", "KO-CAL-saidthat"),
     ("해당 노드를 먼저 지운다.", "KO-CAL-said"),
     ("익명 사용자의 경우 IP로 평가한다.", "KO-CAL-incase"),
-    ("이 PR은 만료 처리를 고친다.", "KO-SUBJ-change"),
     ("이 문서는 캐시 구조를 정리한다.", "KO-SUBJ-doc"),
-    ("이 값은 다른 값보다 더 안정적인 결과를 준다.", "KO-CAL-more"),
     ("이 모듈은 재시도 기능을 제공한다.", "KO-CAL-provide"),
     ("구조적으로 보면 논리적으로 맞다.", "KO-ADV-jeok"),
     ("워크스페이스를 위한 별도 인덱스를 만든다.", "KO-NOM-for"),
@@ -64,6 +61,10 @@ NEGATIVE = [
     "The scheduler refreshes the token on every run.",
     "The worker rebuilds the cache after invalidation.",
     "Only admins can sign in.",
+    "장애 원인은 네트워크 지연인 것으로 보인다.",
+    "이 PR은 권한 검사를 추가한다.",
+    "이 값은 다른 값보다 더 안정적인 결과를 준다.",
+    "사용자 권한에 대한 설명을 읽는다.",
 ]
 
 
@@ -135,6 +136,25 @@ x = "이 값에 대한 처리를 수행한다"
     if 5 not in nums:
         failures.append(f"line numbers wrong: {nums}")
 
+    # A soft-wrapped Markdown paragraph is one sentence with its first line.
+    wrapped = "사용자 요청을 처리하는 워커가 각 작업의 상태를 확인하고\n" \
+              "권한과 만료 시각을 검사한 다음 적절한 실행 경로를 선택하여\n" \
+              "필요한 결과를 기록하고 호출자에게 응답을 돌려준다."
+    wrapped_sentences = list(extract_sentences(wrapped))
+    if len(wrapped_sentences) != 1 or wrapped_sentences[0][0] != 1:
+        failures.append(f"wrapped paragraph split incorrectly: {wrapped_sentences}")
+    if "KO-LONG" not in rules_fired(wrapped_sentences[0][1]):
+        failures.append("MISS  KO-LONG across soft-wrapped lines")
+    list_sentences = list(extract_sentences("- " + wrapped.replace("\n", "\n  ")))
+    if len(list_sentences) != 1 or "KO-LONG" not in rules_fired(list_sentences[0][1]):
+        failures.append(f"soft-wrapped list item split incorrectly: {list_sentences}")
+    quote_sentences = list(extract_sentences("> " + wrapped.replace("\n", "\n> ")))
+    if len(quote_sentences) != 1 or "KO-LONG" not in rules_fired(quote_sentences[0][1]):
+        failures.append(f"soft-wrapped quote split incorrectly: {quote_sentences}")
+    two_lines = list(extract_sentences("첫 문장은 여기서 끝난다.\n둘째 문장은 다음 줄에서 시작한다."))
+    if [line for line, _, _ in two_lines] != [1, 2]:
+        failures.append(f"sentence line mapping wrong: {two_lines}")
+
     # A typo in a gate path must not report success.
     lint_cli = Path(__file__).resolve().parent.parent / "scripts" / "lint.py"
     missing = subprocess.run(
@@ -151,7 +171,7 @@ x = "이 값에 대한 처리를 수행한다"
         for f in failures:
             print("  " + f)
         return 1
-    print(f"ok — {len(POSITIVE)} positive, {len(NEGATIVE)} negative, 7 structural")
+    print(f"ok — {len(POSITIVE)} positive, {len(NEGATIVE)} negative, 10 structural")
     return 0
 
 

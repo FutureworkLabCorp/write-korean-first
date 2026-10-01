@@ -13,6 +13,7 @@ rules_en.py; see reference/why-translationese.md for the reasoning behind them.
 """
 
 import argparse
+from bisect import bisect_right
 import json
 import re
 import sys
@@ -69,20 +70,51 @@ def extract_sentences(text: str):
                 start = i + 1
                 break
 
+    paragraph = []
+    in_quote = False
+
+    def flush():
+        nonlocal paragraph
+        starts, numbers, parts = [], [], []
+        offset = 0
+        for lineno, part in paragraph:
+            starts.append(offset)
+            numbers.append(lineno)
+            parts.append(part)
+            offset += len(part) + 1
+        joined = " ".join(parts)
+        result = []
+        start = 0
+        for boundary in list(_SENT.finditer(joined)) + [None]:
+            end = boundary.start() if boundary else len(joined)
+            sent = joined[start:end].strip()
+            if len(sent) >= 8:
+                line = numbers[bisect_right(starts, start) - 1]
+                result.append((line, sent, False))
+            start = boundary.end() if boundary else len(joined)
+        paragraph = []
+        return result
+
     for idx in range(start, len(lines)):
         raw = lines[idx]
         lineno = idx + 1
 
         if _SKIP_START.search(raw):
+            yield from flush()
+            in_quote = False
             in_skip = True
             continue
         if _SKIP_END.search(raw):
             in_skip = False
             continue
         if in_skip or _SKIP_LINE.search(raw):
+            yield from flush()
+            in_quote = False
             continue
 
         if _FENCE.match(raw):
+            yield from flush()
+            in_quote = False
             in_fence = not in_fence
             continue
         if in_fence:
@@ -93,25 +125,40 @@ def extract_sentences(text: str):
                 in_comment = False
             continue
         if _HTML_COMMENT_OPEN.search(raw) and not _HTML_COMMENT_CLOSE.search(raw):
+            yield from flush()
+            in_quote = False
             in_comment = True
             continue
         raw = re.sub(r"<!--.*?-->", "", raw)
 
         stripped = raw.strip()
         if not stripped or set(stripped) <= set("-=|: "):
+            yield from flush()
+            in_quote = False
             continue
 
         is_table = stripped.startswith("|")
+        is_block = bool(_LEAD.match(raw))
+        is_quote = stripped.startswith(">")
+        is_heading = stripped.startswith("#")
+        if is_table or is_heading or (is_block and not is_quote) or (is_quote != in_quote):
+            yield from flush()
+        in_quote = is_quote
         chunks = [c for c in stripped.strip("|").split("|")] if is_table else [stripped]
 
         for chunk in chunks:
             cleaned = clean_line(chunk)
             if len(cleaned) < 8:
                 continue
-            for sent in _SENT.split(cleaned):
-                sent = (sent or "").strip()
-                if len(sent) >= 8:
-                    yield lineno, sent, is_table
+            if is_table:
+                for sent in _SENT.split(cleaned):
+                    if len(sent.strip()) >= 8:
+                        yield lineno, sent.strip(), True
+            else:
+                paragraph.append((lineno, cleaned))
+        if is_heading:
+            yield from flush()
+    yield from flush()
 
 
 def detect_lang(sentence: str) -> str:
