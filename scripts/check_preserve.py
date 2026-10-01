@@ -22,6 +22,7 @@ import json
 import re
 import sys
 from collections import Counter
+from difflib import SequenceMatcher
 from pathlib import Path
 
 FENCE = re.compile(r"^[ \t]*(```|~~~)[^\n]*\n.*?^[ \t]*\1[ \t]*$", re.S | re.M)
@@ -32,6 +33,10 @@ URL = re.compile(r"https?://[^\s)>\]`]+")
 COMMENT = re.compile(r"<!--.*?-->", re.S)
 HEADING = re.compile(r"^#{1,6}[ \t].*$", re.M)
 NUM = re.compile(r"(?<![A-Za-z_\d])\d+(?:[.,:]\d+)*")
+# Phrases that turn a statement into a claim about what is common or agreed. A
+# rewrite that adds one asserts something the original did not.
+GENERAL = re.compile(r"일반적으로|흔히|널리 (?:쓰|알려)|대부분의 경우|통상적으로|대개|업계에서|관행적으로")
+CHANGE_NOTE = 0.30
 LATIN = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_'-]*")
 
 STRICT = ("code block", "inline code", "wiki link", "link target", "url", "comment",
@@ -91,6 +96,14 @@ def compare(before: str, after: str, profile: str):
             notes.append(entry)
     if table_shape(before) != table_shape(after):
         failures.append({"kind": "table shape", "lost": [], "added": []})
+
+    pa, pb = without_code(before), without_code(after)
+    claims = Counter(GENERAL.findall(pb)) - Counter(GENERAL.findall(pa))
+    if claims:
+        notes.append({"kind": "new general claim", "lost": [], "added": sorted(claims.elements())})
+    rate = 1 - SequenceMatcher(None, pa, pb).ratio()
+    if rate >= CHANGE_NOTE:
+        notes.append({"kind": f"change rate {rate:.0%}", "lost": [], "added": []})
     return failures, notes
 
 

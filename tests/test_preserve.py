@@ -67,12 +67,23 @@ def main() -> int:
             failures.append(f"{desc}: expected {sorted(expected)}, got {sorted(got)}")
     if "english word" in kinds(BASE.replace("source of truth", "기준"), "prose"):
         failures.append("prose profile must not guard English words")
+
+    # A new "commonly / generally" claim is noted, never failed.
+    claimed = BASE.replace("5.6초 안에 끝난다", "일반적으로 5.6초 안에 끝난다")
+    fails, notes = compare(BASE, claimed, "coding")
+    if fails or not any(n["kind"] == "new general claim" for n in notes):
+        failures.append(f"new general claim not noted: {fails} {notes}")
+    # A wholesale rewrite is noted by change rate.
+    _, notes = compare(BASE, BASE.replace("실패한 delivery의 source of truth이고",
+                                          "x" * 400), "coding")
+    if not any(n["kind"].startswith("change rate") for n in notes):
+        failures.append("large rewrite not noted by change rate")
     if failures:
         print(f"FAIL ({len(failures)})")
         for f in failures:
             print("  " + f)
         return 1
-    print(f"ok — {len(CASES) + 1} cases")
+    print(f"ok — {len(CASES) + 3} cases")
     return 0
 
 
