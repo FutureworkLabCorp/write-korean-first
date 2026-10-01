@@ -39,6 +39,7 @@ POSITIVE = [
     ("이 모듈은 재시도 기능을 제공한다.", "KO-CAL-provide"),
     ("구조적으로 보면 논리적으로 맞다.", "KO-ADV-jeok"),
     ("워크스페이스를 위한 별도 인덱스를 만든다.", "KO-NOM-for"),
+    ("잡이 실패한다 — 워커가 재시도한다 — 상한에 닿으면 멈춘다.", "KO-DASH"),
     ("The worker will perform a validation of the payload.", "EN-NOM-perform"),
     ("In order to retry, set the flag.", "EN-WORDY-inorder"),
     ("The fact that it fails is known.", "EN-WORDY-fact"),
@@ -48,6 +49,12 @@ POSITIVE = [
     ("We utilize a retry loop.", "EN-WORDY-utilize"),
     ("This covers timeouts, retries, and so on.", "EN-VAGUE-etc"),
     ("The node has the ability to retry.", "EN-WORDY-ability"),
+]
+
+# Fire only in the prose profile; the coding profile keeps English as written.
+PROSE_ONLY = [
+    ("DB 잡 큐가 상태의 source of truth이고 워커가 실행한다.", "KO-MIX"),
+    ("dispatch validation failure는 제출 전에 기록된다.", "KO-MIX"),
 ]
 
 # Healthy prose that must stay silent.
@@ -65,12 +72,16 @@ NEGATIVE = [
     "이 PR은 권한 검사를 추가한다.",
     "이 값은 다른 값보다 더 안정적인 결과를 준다.",
     "사용자 권한에 대한 설명을 읽는다.",
+    "만료된 refresh token을 다시 발급한다.",
+    "캐시와 checkpoint를 함께 지운다.",
+    "`job queue`가 비면 멈춘다.",
+    "잡이 실패하면 워커가 재시도한다 — 상한은 3회다.",
 ]
 
 
-def rules_fired(sentence):
+def rules_fired(sentence, profile="coding"):
     lang = detect_lang(sentence)
-    return {h["rule"] for h in check_sentence(sentence, lang, is_table=False)}
+    return {h["rule"] for h in check_sentence(sentence, lang, is_table=False, profile=profile)}
 
 
 def main() -> int:
@@ -86,6 +97,20 @@ def main() -> int:
         if fired:
             failures.append(f"FALSE {sorted(fired)}: {sentence!r}")
 
+    for sentence, expected in PROSE_ONLY:
+        if expected not in rules_fired(sentence, "prose"):
+            failures.append(f"MISS  {expected} (prose): {sentence!r}")
+        if expected in rules_fired(sentence):
+            failures.append(f"FALSE {expected} in the default coding profile: {sentence!r}")
+
+    # Coding profile: an English word is one chunk to the reader, not its letters.
+    termy = ("worker가 queue에서 job을 꺼내 scheduler에 넘기고 timeout이 지나면 "
+             "lease를 회수해 다른 worker에게 다시 맡긴다.")
+    if "KO-LONG" in rules_fired(termy):
+        failures.append("FALSE KO-LONG counted English letters in the coding profile")
+    if "KO-LONG" not in rules_fired(termy, "prose"):
+        failures.append("MISS  KO-LONG in the prose profile on the same sentence")
+
     # Length rules use the right unit per language.
     ko_long = "가" * 120
     if "KO-LONG" not in rules_fired(ko_long):
@@ -93,6 +118,30 @@ def main() -> int:
     en_long = " ".join(["word"] * 40)
     if "EN-LONG" not in rules_fired(en_long):
         failures.append("MISS  EN-LONG on a 40-word English sentence")
+
+    # A citation in parentheses makes a sentence longer on screen, not harder to read.
+    cited = "워커가 잡을 꺼내 실행하고 결과를 기록한다(" + "근거" * 40 + ")."
+    if "KO-LONG" in rules_fired(cited):
+        failures.append("FALSE KO-LONG counted a parenthetical aside")
+    # A labelled enumeration is a list, not a sentence to split.
+    listed = "재검증 범위: " + ", ".join(["상태 기계와 enum 실체"] * 8) + "."
+    if "KO-LONG" in rules_fired(listed):
+        failures.append("FALSE KO-LONG on a labelled enumeration")
+    # ...but an unlabelled long clause still fires.
+    if "KO-LONG" not in rules_fired("가" * 60 + ", " + "나" * 60 + "."):
+        failures.append("MISS  KO-LONG on a long sentence with commas")
+
+    # A wording hit outranks any length hit: it names the words to change.
+    ranked = "해당 노드를 지운다.\n\n" + "가" * 130 + "."
+    _, rf = lint_text(ranked, "r.md")
+    if not rf or max(rf, key=lambda f: f["score"])["hits"][0]["rule"] != "KO-CAL-said":
+        failures.append(f"ranking puts length above wording: {rf}")
+
+    # Wiki links read as their label, not as "[[" noise.
+    _, wl = lint_text("자세한 내용은 [[Auth-Backend-and-Local-Password-Very-Long-Page-Name-"
+                      "For-Testing-Only-" + "x" * 40 + "|인증]]을 본다.", "w.md")
+    if wl:
+        failures.append(f"FALSE wiki-link target counted toward length: {wl}")
 
     # Markdown scaffolding must not reach the rules.
     md = """---
@@ -171,7 +220,7 @@ x = "이 값에 대한 처리를 수행한다"
         for f in failures:
             print("  " + f)
         return 1
-    print(f"ok — {len(POSITIVE)} positive, {len(NEGATIVE)} negative, 10 structural")
+    print(f"ok — {len(POSITIVE)} positive, {len(NEGATIVE)} negative, {len(PROSE_ONLY)} prose-only, 18 structural")
     return 0
 
 

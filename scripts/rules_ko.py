@@ -170,6 +170,67 @@ RULES = [
 
 COMPILED = [(rid, sev, re.compile(pat), why, fix) for rid, sev, pat, why, fix in RULES]
 
-# Sentence length thresholds, in characters (excluding markdown noise).
+# --- Code-switching: an English phrase glued to a Korean particle. ---
+# The most common translationese in technical docs is not a calque but an English
+# noun phrase left untranslated in the middle of a Korean sentence ("source of
+# truth이고", "dispatch validation failure는"). Single words are left alone: the
+# glossary keeps many of them in English on purpose. Inline code is masked before
+# this runs, so a symbol never reaches it.
+_MIX = re.compile(
+    # Words may be joined by "/" or "-", but a phrase needs a space: "user/group"
+    # is a pair of alternatives, "source of truth" is an untranslated phrase.
+    r"(?<![A-Za-z/-])([a-z][a-z]+(?:[/-][a-z][a-z]+)*(?: [a-z][a-z]+(?:[/-][a-z][a-z]+)*)+)"
+    r"(?=(?:이고|이며|이다|이므로|이라|다|가|이|를|을|는|은|로|으로|에서|에|의|와|과|도|만"
+    r"|할|하는|한다|해서|하고)(?:[\s.,)]|$))"
+)
+# Phrases that are terms of art in this team's writing. Extend it rather than
+# arguing with the rule: a term that is always written in English is a term.
+MIX_KEEP = {
+    "access token", "refresh token", "event loop", "foreign key", "fail-closed",
+    "fail-open", "forward-only", "rate limit", "rate limiter", "best-effort",
+    "read-modify-write", "pull request", "dry-run",
+}
+
+
+def mixed_phrases(sentence: str):
+    """English phrases glued to a Korean particle, minus the kept terms."""
+    return [m.group(1) for m in _MIX.finditer(sentence) if m.group(1) not in MIX_KEEP]
+
+
+_DASH = re.compile(r"\s[—–]\s")
+
+
+def dash_chain(sentence: str):
+    """Two or more spaced dashes: an English-style aside or a chain of clauses."""
+    found = _DASH.findall(sentence)
+    return ["—" * len(found)] if len(found) >= 2 else []
+
+
+# (id, severity, finder, why, fix, profiles). A finder returns the matched text,
+# or an empty list when the sentence is clean.
+EXTRA = [
+    (
+        "KO-MIX",
+        "MED",
+        mixed_phrases,
+        "영어 구를 번역하지 않고 조사를 붙였다",
+        "일반 영어 구면 한국어로 쓰고, 코드면 백틱, 팀이 굳힌 용어면 MIX_KEEP에 올린다",
+        ("prose",),
+    ),
+    (
+        "KO-DASH",
+        "MED",
+        dash_chain,
+        "대시 둘로 문장 가운데 삽입구를 끼웠거나 절을 여러 번 이었다. 한국어는 서술어가 끝에 와서 끼운 말이 어순을 끊는다",
+        "삽입구는 괄호로 옮기거나 문장 뒤로 빼고, 이어 붙인 절은 첫 대시에서 나눈다",
+        ("coding", "prose"),
+    ),
+]
+
+# Sentence length thresholds, in characters. Measured after markdown noise,
+# (in the coding profile, each English word counts as two characters -- a reader
+# of a codebase takes "worker" in as one chunk, not six letters),
+# parenthetical asides and wiki-link targets are removed: a `(file:line)` citation
+# makes a sentence longer on screen but not harder to follow.
 LONG_HIGH = 100
 LONG_MED = 80
