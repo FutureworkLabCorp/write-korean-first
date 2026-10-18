@@ -40,6 +40,18 @@ POSITIVE = [
     ("구조적으로 보면 논리적으로 맞다.", "KO-ADV-jeok"),
     ("워크스페이스를 위한 별도 인덱스를 만든다.", "KO-NOM-for"),
     ("잡이 실패한다 — 워커가 재시도한다 — 상한에 닿으면 멈춘다.", "KO-DASH"),
+    # Conversation replies end in 반말 or 해요체, not only in -다.
+    ("인덱스를 다시 만들 필요가 있어.", "KO-CAL-need"),
+    ("같은 이름의 노드가 존재해.", "KO-CAL-exist"),
+    ("이 객체는 세션을 가지고 있어요.", "KO-CAL-have"),
+    ("이 모듈은 재시도 기능을 제공해요.", "KO-CAL-provide"),
+    ("입력값 검증을 수행해.", "KO-NOM-double"),
+    ("이 설정이 병렬 실행을 가능하게 해.", "KO-CAL-possible"),
+    ("사실상 같은 동작이라고 할 수 있어.", "KO-CAL-saidthat"),
+    ("이 작업은 관리자 권한을 필요로 한다.", "KO-CAL-require"),
+    ("많은 수의 요청이 한꺼번에 몰린다.", "KO-CAL-many"),
+    ("설정 파일은 /etc 아래에 위치한다.", "KO-CAL-located"),
+    ("경고에도 불구하고 그대로 배포했다.", "KO-CAL-despite"),
     ("The worker will perform a validation of the payload.", "EN-NOM-perform"),
     ("In order to retry, set the flag.", "EN-WORDY-inorder"),
     ("The fact that it fails is known.", "EN-WORDY-fact"),
@@ -76,6 +88,17 @@ NEGATIVE = [
     "캐시와 checkpoint를 함께 지운다.",
     "`job queue`가 비면 멈춘다.",
     "잡이 실패하면 워커가 재시도한다 — 상한은 3회다.",
+    # Jargon the team already speaks stays: a coined Korean replacement reads worse.
+    "필터가 예외를 삼키면 원인이 로그에만 남는다.",
+    "설정이 틀리면 조용히 기본값으로 돌아간다.",
+    "핸들러가 커스텀 매니페스트를 읽는다.",
+    "orphan 객체는 purge 잡이 지운다.",
+    "이 함수는 부작용이 없다.",
+    # Wider endings must not catch neighbouring words.
+    "파일을 가져와서 읽는다.",
+    "문서 링크를 제공받는다.",
+    "필요가 있으면 다시 만든다.",
+    "존재하는 키만 지운다.",
 ]
 
 
