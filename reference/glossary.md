@@ -14,7 +14,23 @@
 그 외 원문 유지: commit, branch, merge, rebase, cherry-pick, PR, issue,
 cache, checkpoint, rollback, migration, schema, index, embedding, chunk,
 workspace, workflow, node, edge, tool, agent, prompt, token, session,
-sandbox, hook, middleware, endpoint, payload, timeout, retry, fallback.
+sandbox, hook, middleware, endpoint, payload, timeout, retry, fallback,
+handler, manifest, orphan, custom, CLI, side effect, idempotent.
+
+## 새 우리말을 지어내지 않는다
+
+억지로 옮긴 낯선 한국어는 원래 말보다 더 헷갈린다. 독자가 이미 아는 말이면 영어든
+굳은 음차어든 그대로 둔다. 고칠 대상은 낱말이 아니라 한국어답지 않은 문장 구조다.
+
+- 영어와 굳은 음차어는 둘 다 된다: `handler`·`핸들러`, `manifest`·`매니페스트`,
+  `fallback`·`폴백`, `orphan`·`고아`, `idempotent`·`멱등`. 한 문서 안에서는 하나로 맞춘다.
+- 팀이 쓰는 관용 표현도 둔다: `예외를 삼킨다`, `조용히 실패한다`.
+- 지어낸 말은 쓰지 않는다: `주인 없는 객체`(orphan), `대체 경로`(fallback),
+  `등록된 함수`(handler), `직접 짠 루틴`(custom).
+- 고친 결과가 원래 말보다 길거나 처음 보는 말이면 되돌린다.
+
+근거(2026-10-18, linkBrain-server 위키 241쪽): handler 186·핸들러 168, fallback 243·폴백 212·대체 경로 0,
+orphan 51·고아 56·주인 없는 1, 조용히 194, 삼키/삼킨 29, 부작용 12·부수 효과 12·side effect 9.
 
 ## 한국어로 쓴다
 
